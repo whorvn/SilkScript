@@ -21,9 +21,8 @@ app.add_middleware(
 # Request model for carpet design data from frontend
 class CarpetDesignRequest(BaseModel):
     design_style: str
-    colors: List[str]  # List of colors (Color1, Color2, Color3, Color4)
-    motifs: List[str]  # List of motifs
-    aspect_ratio: Optional[str] = "4:3"  # Default aspect ratio
+    color_palette: str  # Name of the color palette (e.g., "Mystical Journey")
+    motif: str  # Single motif name (e.g., "Palmette")
     additional_details: Optional[str] = ""  # Any additional design details
 
 # Response model for API response
@@ -38,37 +37,48 @@ def create_detailed_prompt(request: CarpetDesignRequest) -> str:
     Create a detailed prompt for Azerbaijan Persian carpet generation
     based on frontend data
     """
-    # Colors text
-    colors_text = ", ".join(request.colors)
+    # Define color palettes
+    color_palettes = {
+        "Mystical Journey": ["Deep Purple", "Royal Blue", "Violet", "Light Gray"],
+        "Mugham Harmony": ["Sky Blue", "Cyan", "Purple", "Amber"],
+        "Royal Purple": ["Dark Purple", "Medium Purple", "Light Purple", "Pale Purple"],
+        "Azure Sky": ["Sky Blue", "Cyan Blue", "Royal Blue", "Indigo"],
+        "Earth Tones": ["Saddle Brown", "Chocolate", "Sandy Brown", "Sienna"],
+        "Sunset Fire": ["Orange Red", "Dark Orange", "Gold", "Fire Brick"],
+        "Forest Harmony": ["Forest Green", "Lime Green", "Olive Drab", "Yellow Green"],
+        "Modern Monochrome": ["Dark Gray", "Gray", "Light Gray", "Very Light Gray"]
+    }
     
-    # Motifs text with cultural details
-    motifs_descriptions = []
-    for motif in request.motifs:
-        if motif.lower() == "palmette":
-            motifs_descriptions.append("Palmette (traditional palm leaf motif)")
-        elif motif.lower() == "rosette":
-            motifs_descriptions.append("Rosette (circular floral design)")
-        elif motif.lower() == "dragon":
-            motifs_descriptions.append("Dragon (powerful symbolic motif)")
-        elif motif.lower() == "bird":
-            motifs_descriptions.append("Bird (freedom and nature symbol)")
-        elif "geometric" in motif.lower():
-            motifs_descriptions.append("intricate geometric patterns")
-        elif "floral" in motif.lower():
-            motifs_descriptions.append("traditional floral designs")
-        elif "star" in motif.lower():
-            motifs_descriptions.append("star medallions")
-        elif "vine" in motif.lower():
-            motifs_descriptions.append("vine scrolls")
-        else:
-            motifs_descriptions.append(f"{motif} motif")
+    # Get colors from palette name
+    colors = color_palettes.get(request.color_palette, ["Deep Red", "Navy Blue", "Golden Yellow", "Dark Gray"])
+    colors_text = ", ".join(colors)
     
-    motifs_text = ", ".join(motifs_descriptions)
+    # Get motif description
+    motif_description = ""
+    motif = request.motif.lower()
+    if motif == "palmette":
+        motif_description = "Palmette (traditional palm leaf motif)"
+    elif motif == "rosette":
+        motif_description = "Rosette (circular floral design)"
+    elif motif == "dragon":
+        motif_description = "Dragon (powerful symbolic motif)"
+    elif motif == "bird":
+        motif_description = "Bird (freedom and nature symbol)"
+    elif "geometric" in motif:
+        motif_description = "intricate geometric patterns"
+    elif "floral" in motif:
+        motif_description = "traditional floral designs"
+    elif "star" in motif:
+        motif_description = "star medallions"
+    elif "vine" in motif:
+        motif_description = "vine scrolls"
+    else:
+        motif_description = f"{request.motif} motif"
     
     # Create detailed prompt
     prompt = (
         f"A highly detailed, traditional Persian and Azerbaijan carpet design in the style of {request.design_style}, "
-        f"featuring {motifs_text}, clearly visible in the carpet design. "
+        f"featuring {motif_description}, clearly visible in the carpet design. "
         f"Intricate floral and geometric patterns, rich textures, and authentic weaving. "
         f"Color palette: {colors_text}. "
         f"Ornate, symmetrical, museum-quality, high-resolution, vibrant, "
@@ -111,9 +121,8 @@ async def generate_carpet_design(request: CarpetDesignRequest):
     Expected JSON format:
     {
       "design_style": "Tabriz",
-      "colors": ["Deep Red", "Navy Blue", "Golden Yellow"],
-      "motifs": ["Palmette", "Rosette", "Dragon"],
-      "aspect_ratio": "4:3",
+      "color_palette": "Mystical Journey",
+      "motif": "Palmette",
       "additional_details": "optional details"
     }
     """
@@ -122,11 +131,11 @@ async def generate_carpet_design(request: CarpetDesignRequest):
         if not request.design_style:
             raise HTTPException(status_code=400, detail="Design style is required")
         
-        if not request.colors or len(request.colors) == 0:
-            raise HTTPException(status_code=400, detail="At least one color is required")
+        if not request.color_palette:
+            raise HTTPException(status_code=400, detail="Color palette is required")
         
-        if not request.motifs or len(request.motifs) == 0:
-            raise HTTPException(status_code=400, detail="At least one motif is required")
+        if not request.motif:
+            raise HTTPException(status_code=400, detail="Motif is required")
         
         # Create detailed prompt from frontend data
         prompt = create_detailed_prompt(request)
