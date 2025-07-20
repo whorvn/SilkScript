@@ -56,22 +56,16 @@ def create_detailed_prompt(request: CarpetDesignRequest) -> str:
     # Get motif description
     motif_description = ""
     motif = request.motif.lower()
-    if motif == "palmette":
-        motif_description = "Palmette (traditional palm leaf motif)"
-    elif motif == "rosette":
-        motif_description = "Rosette (circular floral design)"
-    elif motif == "dragon":
-        motif_description = "Dragon (powerful symbolic motif)"
+    if motif == "buta":
+        motif_description = "Buta (traditional paisley motif, iconic Azerbaijan symbol representing life and eternity)"
+    elif motif == "rosekhatte":
+        motif_description = "RoseKhatte (rose and line motif, symbol of beauty and elegance in Azerbaijan carpets)"
     elif motif == "bird":
-        motif_description = "Bird (freedom and nature symbol)"
+        motif_description = "Bird (freedom and nature symbol, representing the soul's journey to heaven)"
     elif "geometric" in motif:
-        motif_description = "intricate geometric patterns"
+        motif_description = "intricate geometric patterns (mathematical precision representing divine order and infinity)"
     elif "floral" in motif:
-        motif_description = "traditional floral designs"
-    elif "star" in motif:
-        motif_description = "star medallions"
-    elif "vine" in motif:
-        motif_description = "vine scrolls"
+        motif_description = "traditional floral designs (garden of paradise motifs with roses, tulips, and vines)"
     else:
         motif_description = f"{request.motif} motif"
     
@@ -263,14 +257,11 @@ def get_options():
             }
         ],
         "motifs": [
-            "Palmette",
-            "Rosette", 
-            "Dragon",
+            "Buta",
+            "Khari Bul-Bul", ,
             "Bird",
             "Geometric patterns",
             "Floral designs",
-            "Star medallions",
-            "Vine scrolls"
         ]
     }
 
