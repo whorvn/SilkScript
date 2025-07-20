@@ -1,8 +1,11 @@
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import List, Optional
 import requests
+import urllib.parse
 
 app = FastAPI()
 
@@ -15,81 +18,189 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Example design patterns, color palettes, and motifs
-DESIGN_PATTERNS = [
-    "Epic Journey Motif",
-    "Rhythmic Harmony",
-    "Shirvan",
-    "Karabagh"
-]
+# Request model for carpet design data from frontend
+class CarpetDesignRequest(BaseModel):
+    design_style: str
+    colors: List[str]  # List of colors (Color1, Color2, Color3, Color4)
+    motifs: List[str]  # List of motifs
+    aspect_ratio: Optional[str] = "4:3"  # Default aspect ratio
+    additional_details: Optional[str] = ""  # Any additional design details
 
-COLOR_PALETTES = [
-    {
-        "name": "Sunset Fire",
-        "colors": [
-            {"name": "Red", "hex": "#FF4500"},
-            {"name": "Orange", "hex": "#FFA500"},
-            {"name": "Yellow", "hex": "#FFD700"},
-            {"name": "Deep Purple", "hex": "#800080"}
-        ]
-    },
-    {
-        "name": "Ocean Breeze",
-        "colors": [
-            {"name": "Blue", "hex": "#1E90FF"},
-            {"name": "Teal", "hex": "#008080"},
-            {"name": "Seafoam", "hex": "#20B2AA"},
-            {"name": "Sand", "hex": "#F4E2D8"}
-        ]
+# Response model for API response
+class GenerationResponse(BaseModel):
+    success: bool
+    message: str
+    image_url: Optional[str] = None
+    error: Optional[str] = None
+
+def create_detailed_prompt(request: CarpetDesignRequest) -> str:
+    """
+    Create a detailed prompt for Azerbaijan Persian carpet generation
+    based on frontend data
+    """
+    # Colors text
+    colors_text = ", ".join(request.colors)
+    
+    # Motifs text with cultural details
+    motifs_descriptions = []
+    for motif in request.motifs:
+        if motif.lower() == "palmette":
+            motifs_descriptions.append("Palmette (traditional palm leaf motif)")
+        elif motif.lower() == "rosette":
+            motifs_descriptions.append("Rosette (circular floral design)")
+        elif motif.lower() == "dragon":
+            motifs_descriptions.append("Dragon (powerful symbolic motif)")
+        elif motif.lower() == "bird":
+            motifs_descriptions.append("Bird (freedom and nature symbol)")
+        elif "geometric" in motif.lower():
+            motifs_descriptions.append("intricate geometric patterns")
+        elif "floral" in motif.lower():
+            motifs_descriptions.append("traditional floral designs")
+        elif "star" in motif.lower():
+            motifs_descriptions.append("star medallions")
+        elif "vine" in motif.lower():
+            motifs_descriptions.append("vine scrolls")
+        else:
+            motifs_descriptions.append(f"{motif} motif")
+    
+    motifs_text = ", ".join(motifs_descriptions)
+    
+    # Create detailed prompt
+    prompt = (
+        f"A highly detailed, traditional Persian and Azerbaijan carpet design in the style of {request.design_style}, "
+        f"featuring {motifs_text}, clearly visible in the carpet design. "
+        f"Intricate floral and geometric patterns, rich textures, and authentic weaving. "
+        f"Color palette: {colors_text}. "
+        f"Ornate, symmetrical, museum-quality, high-resolution, vibrant, "
+        f"inspired by historical carpets from Shirvan, Karabagh, and the Caucasus region."
+    )
+    
+    # Add additional details if provided
+    if request.additional_details:
+        prompt += f" {request.additional_details}."
+    
+    return prompt
+
+@app.get("/")
+async def root():
+    """
+    Root endpoint with API information
+    """
+    return {
+        "message": "Azerbaijan Carpet Design Generator API",
+        "version": "1.0.0",
+        "endpoints": {
+            "/generate": "POST - Generate carpet design",
+            "/options": "GET - Get available options",
+            "/health": "GET - Health check"
+        }
     }
-]
 
-PATTERNS = [
-    "Buta",
-    "Khari BulBul"
-]
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint
+    """
+    return {"status": "healthy", "service": "carpet-design-generator"}
+
+@app.post("/generate", response_model=GenerationResponse)
+async def generate_carpet_design(request: CarpetDesignRequest):
+    """
+    Generate Azerbaijan carpet design from frontend data
+    
+    Expected JSON format:
+    {
+      "design_style": "Tabriz",
+      "colors": ["Deep Red", "Navy Blue", "Golden Yellow"],
+      "motifs": ["Palmette", "Rosette", "Dragon"],
+      "aspect_ratio": "4:3",
+      "additional_details": "optional details"
+    }
+    """
+    try:
+        # Validate input
+        if not request.design_style:
+            raise HTTPException(status_code=400, detail="Design style is required")
+        
+        if not request.colors or len(request.colors) == 0:
+            raise HTTPException(status_code=400, detail="At least one color is required")
+        
+        if not request.motifs or len(request.motifs) == 0:
+            raise HTTPException(status_code=400, detail="At least one motif is required")
+        
+        # Create detailed prompt from frontend data
+        prompt = create_detailed_prompt(request)
+        
+        # URL encode the prompt for Pollinations API
+        encoded_prompt = urllib.parse.quote(prompt)
+        api_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
+        
+        # Call Pollinations API
+        response = requests.get(api_url, timeout=30)
+        
+        if response.status_code == 200:
+            return GenerationResponse(
+                success=True,
+                message="Carpet design generated successfully",
+                image_url=api_url
+            )
+        else:
+            return GenerationResponse(
+                success=False,
+                message="Failed to generate carpet design",
+                error=f"API returned status code {response.status_code}"
+            )
+            
+    except requests.RequestException as e:
+        return GenerationResponse(
+            success=False,
+            message="Failed to generate carpet design",
+            error=f"Network error: {str(e)}"
+        )
+    except Exception as e:
+        return GenerationResponse(
+            success=False,
+            message="Failed to generate carpet design",
+            error=f"Internal error: {str(e)}"
+        )
 
 @app.get("/options")
 def get_options():
+    """
+    Get available design options for the frontend
+    """
     return {
-        "design_patterns": DESIGN_PATTERNS,
-        "color_palettes": COLOR_PALETTES,
-        "motifs": PATTERNS
+        "design_patterns": [
+            "Tabriz",
+            "Ganja", 
+            "Shirvan",
+            "Baku",
+            "Karabagh",
+            "Gazakh",
+            "Kubba"
+        ],
+        "motifs": [
+            "Palmette",
+            "Rosette", 
+            "Dragon",
+            "Bird",
+            "Geometric patterns",
+            "Floral designs",
+            "Star medallions",
+            "Vine scrolls"
+        ],
+        "color_suggestions": [
+            "Deep Red",
+            "Navy Blue", 
+            "Golden Yellow",
+            "Dark Slate Gray",
+            "Emerald Green",
+            "Royal Purple",
+            "Crimson",
+            "Sapphire Blue"
+        ]
     }
 
-@app.get("/generate-image")
-def generate_image(
-    design_pattern: str = Query(...),
-    color_palette: str = Query(...),
-    motif: str = Query(...)
-):
-    # Find palette colors
-    palette = next((p for p in COLOR_PALETTES if p["name"] == color_palette), None)
-    if not palette:
-        return JSONResponse(status_code=400, content={"error": "Invalid color palette"})
-    colors = ", ".join([f"{c['name']} ({c['hex']})" for c in palette["colors"]])
-    # Compose a detailed prompt for Persian and Azerbaijan carpet styles
-    motif_detail = ""
-    if motif.lower() == "buta":
-        motif_detail = "Buta, an iconic Azerbaijan cultural motif, clearly visible in the carpet design. "
-    elif motif.lower() == "khari bulbul":
-        motif_detail = "Khari BulBul, a famous Azerbaijan cultural motif, clearly featured in the carpet. "
-    else:
-        motif_detail = f"{motif} motif, clearly visible in the carpet design. "
-
-    prompt = (
-        f"A highly detailed, traditional Persian and Azerbaijan carpet design in the style of {design_pattern}, "
-        f"{motif_detail}Intricate floral and geometric patterns, rich textures, and authentic weaving. "
-        f"Color palette: {colors}. Ornate, symmetrical, museum-quality, high-resolution, vibrant, inspired by historical carpets from Shirvan, Karabagh, and the Caucasus region."
-    )
-    api_url = f"https://image.pollinations.ai/prompt/{prompt}"
-    # Call Pollinations API
-    try:
-        response = requests.get(api_url)
-        if response.status_code == 200:
-            # Return the image URL (Pollinations serves the image directly)
-            return {"image_url": api_url}
-        else:
-            return JSONResponse(status_code=502, content={"error": "Image generation failed"})
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
