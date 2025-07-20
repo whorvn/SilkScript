@@ -258,7 +258,7 @@ def get_options():
         ],
         "motifs": [
             "Buta",
-            "Khari Bul-Bul", ,
+            "Khari Bul-Bul",
             "Bird",
             "Geometric patterns",
             "Floral designs",
